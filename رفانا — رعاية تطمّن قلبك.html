@@ -785,6 +785,18 @@ a.card[data-service] p{display:none}
         <div class="fg"><label for="svc">الخدمة</label>
           <div class="booking-details" id="booking-details" hidden aria-live="polite"><h3 tabindex="-1"></h3><p></p></div><select id="svc" class="inp"><option>كشف وفحص دوري</option><option>تطعيم</option><option>رعاية بيطرية / علاج</option><option>متابعة بعد زيارة</option><option>استشارة</option><option>السجل الطبي الرقمي</option><option>تذكير بالمواعيد</option></select>
         </div>
+        <div class="fg">
+          <label for="visit-type">مكان الكشف</label>
+          <select class="inp" id="visit-type" required>
+            <option value="">اختار مكان الكشف</option>
+            <option value="clinic">موعد في العيادة</option>
+            <option value="home">زيارة منزلية — دكتور لحد باب البيت</option>
+          </select>
+        </div>
+        <div class="fg" id="home-address-field" hidden>
+          <label for="home-address">عنوان الزيارة المنزلية</label>
+          <textarea class="inp" id="home-address" rows="3" maxlength="350" autocomplete="street-address" placeholder="المنطقة، الشارع، رقم العمارة، والدور أو الشقة" disabled></textarea>
+        </div>
         <div class="fg"><label for="days">اليوم المفضّل</label><select class="inp" id="days" required><option value="">اختار اليوم</option></select></div>
         <button class="btn submit" type="submit">كمّل على واتساب</button>
         <p class="booking-note">واتساب هيفتح برسالة جاهزة. اختار جهة اتصال العيادة عشان تبعت الطلب.</p>
@@ -850,12 +862,40 @@ for (let offset = 1; offset <= 10; offset++) {
   daysEl.add(new Option(label, label));
 }
 
+const visitType = $('#visit-type');
+const addressField = $('#home-address-field');
+const homeAddress = $('#home-address');
+
+function syncVisitType() {
+  const isHomeVisit = visitType.value === 'home';
+  addressField.hidden = !isHomeVisit;
+  homeAddress.disabled = !isHomeVisit;
+  homeAddress.required = isHomeVisit;
+  if (!isHomeVisit) homeAddress.setCustomValidity('');
+}
+
+visitType.addEventListener('change', syncVisitType);
+homeAddress.addEventListener('input', () => homeAddress.setCustomValidity(''));
+window.addEventListener('pageshow', syncVisitType);
+syncVisitType();
+
 $('.bk-form').addEventListener('submit', event => {
   event.preventDefault();
   const animal = $('[data-group=pet] .on').dataset.v;
   const service = $('#svc').value;
-  const message = ['أهلًا كوله، حابب أحجز موعد.', 'الحيوان: ' + animal,
-    'الخدمة: ' + service, 'اليوم المفضّل: ' + daysEl.value].join('\n');
+  const isHomeVisit = visitType.value === 'home';
+  const address = homeAddress.value.trim();
+  if (isHomeVisit && !address) {
+    homeAddress.setCustomValidity('اكتب عنوان الزيارة المنزلية.');
+    homeAddress.reportValidity();
+    return;
+  }
+
+  const details = ['أهلًا كوله، حابب أحجز موعد.', 'الحيوان: ' + animal,
+    'الخدمة: ' + service, 'اليوم المفضّل: ' + daysEl.value,
+    'مكان الكشف: ' + (isHomeVisit ? 'زيارة منزلية' : 'موعد في العيادة')];
+  if (isHomeVisit) details.push('العنوان: ' + address);
+  const message = details.join('\n');
   location.assign('https://wa.me/?text=' + encodeURIComponent(message));
 });
 
