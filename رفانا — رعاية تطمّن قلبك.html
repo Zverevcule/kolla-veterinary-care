@@ -798,6 +798,17 @@ a.card[data-service] p{display:none}
           <textarea class="inp" id="home-address" rows="3" maxlength="350" autocomplete="street-address" placeholder="المنطقة، الشارع، رقم العمارة، والدور أو الشقة" disabled></textarea>
         </div>
         <div class="fg"><label for="days">اليوم المفضّل</label><select class="inp" id="days" required><option value="">اختار اليوم</option></select></div>
+        <div class="fg">
+          <label for="preferred-time">الوقت المفضّل</label>
+          <select class="inp" id="preferred-time">
+            <option>صباحًا</option><option>بعد الظهر</option><option>مساءً</option>
+          </select>
+        </div>
+        <div class="two">
+          <div class="fg"><label for="nm">اسمك</label><input class="inp" id="nm" autocomplete="name" required maxlength="120" placeholder="الاسم"></div>
+          <div class="fg"><label for="ph">رقم الموبايل</label><input class="inp" id="ph" type="tel" autocomplete="tel" required maxlength="24" dir="ltr" style="text-align:right" placeholder="01xxxxxxxxx"></div>
+        </div>
+        <div class="fg"><label for="pn">اسم الحيوان (اختياري)</label><input class="inp" id="pn" maxlength="120" placeholder="مثلًا: لونا"></div>
         <button class="btn submit" type="submit">كمّل على واتساب</button>
         <p class="booking-note">واتساب هيفتح برسالة جاهزة. اختار جهة اتصال العيادة عشان تبعت الطلب.</p>
       </form>
@@ -879,8 +890,21 @@ homeAddress.addEventListener('input', () => homeAddress.setCustomValidity(''));
 window.addEventListener('pageshow', syncVisitType);
 syncVisitType();
 
+['#nm', '#ph'].forEach(selector => {
+  $(selector).addEventListener('input', event => event.target.setCustomValidity(''));
+});
+
 $('.bk-form').addEventListener('submit', event => {
   event.preventDefault();
+  const nameField = $('#nm');
+  const phoneField = $('#ph');
+  const name = nameField.value.trim();
+  const digits = '٠١٢٣٤٥٦٧٨٩';
+  const phone = phoneField.value.replace(/[٠-٩]/g, digit => digits.indexOf(digit)).replace(/[\s()-]/g, '');
+  nameField.setCustomValidity(name.length >= 2 ? '' : 'اكتب اسمك من فضلك.');
+  phoneField.setCustomValidity(/^(?:\+?20|0)?1[0125]\d{8}$/.test(phone) ? '' : 'اكتب رقم موبايل مصري صحيح، مثل 01012345678.');
+  if (!event.currentTarget.reportValidity()) return;
+
   const animal = $('[data-group=pet] .on').dataset.v;
   const service = $('#svc').value;
   const isHomeVisit = visitType.value === 'home';
@@ -894,6 +918,9 @@ $('.bk-form').addEventListener('submit', event => {
   const details = ['أهلًا كوله، حابب أحجز موعد.', 'الحيوان: ' + animal,
     'الخدمة: ' + service, 'اليوم المفضّل: ' + daysEl.value,
     'مكان الكشف: ' + (isHomeVisit ? 'زيارة منزلية' : 'موعد في العيادة')];
+  details.push('الاسم: ' + name, 'رقم الموبايل: ' + phone, 'الوقت المفضّل: ' + $('#preferred-time').value);
+  const animalName = $('#pn').value.trim();
+  if (animalName) details.push('اسم الحيوان: ' + animalName);
   if (isHomeVisit) details.push('العنوان: ' + address);
   const message = details.join('\n');
   location.assign('https://wa.me/?text=' + encodeURIComponent(message));
